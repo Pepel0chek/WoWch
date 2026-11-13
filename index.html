@@ -13,7 +13,7 @@
 * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
 body { background: var(--bg); color: var(--tx); height: 100vh; display: flex; overflow: hidden; font-size: 16px; }
 
-/* Панели (увеличены) */
+/* Левая панель серверов */
 #rail { width: 80px; background: var(--rail); display: flex; flex-direction: column; align-items: center; padding: 16px 0; gap: 12px; z-index: 10; overflow-y: auto; }
 .sv { width: 56px; height: 56px; border-radius: 50%; background: var(--bg); display: grid; place-items: center; font-weight: 700; cursor: pointer; transition: .2s; font-size: 24px; position: relative; flex-shrink: 0; color: var(--tx); }
 .sv:hover, .sv.on { border-radius: 18px; background: var(--br); color: #fff; }
@@ -22,11 +22,13 @@ body { background: var(--bg); color: var(--tx); height: 100vh; display: flex; ov
 .sv.add:hover { border-color: var(--ok); border-radius: 50%; background: var(--hov); }
 .divider { width: 40px; height: 2px; background: var(--side); border-radius: 1px; margin: 4px 0; flex-shrink: 0; }
 
+/* Список каналов */
 #side { width: 280px; background: var(--side); display: flex; flex-direction: column; z-index: 5; }
 .hd { height: 56px; display: flex; align-items: center; justify-content: space-between; padding: 0 16px; font-weight: 700; border-bottom: 1px solid var(--rail); font-size: 16px; }
 #chs { flex: 1; overflow-y: auto; padding: 12px; }
 .ch { display: flex; align-items: center; padding: 10px 12px; border-radius: 6px; cursor: pointer; color: var(--mu); font-weight: 500; margin-bottom: 4px; transition: .1s; gap: 12px; font-size: 15px; }
 .ch:hover, .ch.on { background: var(--hov); color: var(--tx); }
+.ch.voice { color: var(--tx); }
 .av { width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; color: #fff; font-weight: 700; flex-shrink: 0; font-size: 16px; position: relative; background-size: cover; background-position: center; }
 .dot { width: 12px; height: 12px; border-radius: 50%; position: absolute; bottom: -2px; right: -2px; border: 2px solid var(--side); }
 .online { background: var(--ok); } .offline { background: var(--mu); }
@@ -128,6 +130,11 @@ button.sec { background: var(--in); color: var(--tx); } button.sec:hover { backg
 <div id="call-ui"><div id="call-avatar-box">?</div><div id="call-name">Имя...</div><div id="call-status" style="color:#ccc;margin-top:10px;font-size:18px;">Соединение...</div><div id="call-btns"><button id="btn-acc" class="hidden">✅</button><button id="btn-mute">🎤</button><button id="btn-dec">❌</button></div></div>
 <div id="toast"></div>
 
+<!-- Кнопка включения микрофона -->
+<div id="mic-request" style="position:fixed;bottom:20px;right:20px;background:var(--err);color:#fff;padding:16px 24px;border-radius:8px;font-weight:bold;font-size:16px;cursor:pointer;z-index:1000;display:none;box-shadow:0 4px 12px rgba(0,0,0,0.5);">
+  🎤 Включить микрофон
+</div>
+
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
 import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, doc, setDoc, getDoc, updateDoc, arrayUnion, limit, deleteField } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
@@ -154,6 +161,7 @@ let currentVoiceChannel = null;
 let localStream = null;
 let activeCalls = {}; 
 let activePersonalCall = null;
+let hasMicPermission = false;
 
 const $ = s => document.querySelector(s);
 
@@ -175,6 +183,18 @@ function createAvatar(name, avatarUrl, statusDot = false, isOnline = false) {
   if (statusDot) { const dot = document.createElement('div'); dot.className = 'dot ' + (isOnline ? 'online' : 'offline'); av.append(dot); }
   return av;
 }
+
+// --- ЗАПРОС МИКРОФОНА ---
+$('#mic-request').onclick = async () => {
+  try {
+    localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    hasMicPermission = true;
+    $('#mic-request').style.display = 'none';
+    toast('Микрофон подключен!');
+  } catch (e) {
+    alert('Ошибка: ' + e.message + '\nПожалуйста, проверьте настройки браузера.');
+  }
+};
 
 // --- ВХОД ---
 window.login = async () => {
@@ -204,6 +224,8 @@ window.login = async () => {
   localStorage.setItem('wowch_name', name);
   
   $('#login').style.display = 'none'; $('#rail').style.display = 'flex'; $('#side').style.display = 'flex'; $('#main').style.display = 'flex';
+  $('#mic-request').style.display = 'block'; // Показываем кнопку запроса микрофона
+  
   updateMyUI();
 
   const onlineRef = doc(db, 'online', myId);
@@ -328,13 +350,18 @@ function renderServerChannels() {
 
 // --- ГОЛОСОВЫЕ КАНАЛЫ (ИСПРАВЛЕНО) ---
 async function joinVoice(sid, cid) {
+  if (!hasMicPermission) {
+    return alert('Сначала нажмите на зеленую кнопку "🎤 Включить микрофон" в правом нижнем углу!');
+  }
   if (currentVoiceChannel === `${sid}_${cid}`) { leaveVoice(); return; }
   if (currentVoiceChannel) leaveVoice();
   
   currentVoiceChannel = `${sid}_${cid}`;
-  try {
-    localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-  } catch (e) { return alert('Нет доступа к микрофону!'); }
+  if (!localStream) {
+    try {
+      localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    } catch (e) { return alert('Нет доступа к микрофону!'); }
+  }
 
   await updateDoc(doc(db, 'servers', sid), {
     [`voice_${cid}.${myId}`]: { name: myDisplayName, avatar: myAvatar || '', peerId: myPeerId }
@@ -488,9 +515,9 @@ window.uploadFile = (input) => {
   reader.readAsDataURL(file);
 };
 
-// --- ЗВОНКИ (ИСПРАВЛЕНО) ---
+// --- ЗВОНКИ ---
 function initPeer() {
-  if (peer) peer.destroy(); // Пересоздаем только при старте
+  if (peer) peer.destroy();
   
   fetch('https://wowch-calls.onrender.com').catch(() => {});
   peer = new Peer(myPeerId, {
@@ -501,15 +528,13 @@ function initPeer() {
   peer.on('error', err => console.log('Ошибка PeerJS:', err.type));
   
   peer.on('call', call => {
-    // Если мы в канале — автоответ
     if (currentVoiceChannel && call.metadata && call.metadata.name) {
       call.answer(localStream);
       setupVoiceCall(call, call.peer);
       return;
     }
 
-    // Иначе личный звонок
-    if (activePersonalCall) { call.close(); return; } // Если уже заняты, отклоняем
+    if (activePersonalCall) { call.close(); return; }
     
     let callerName = call.metadata?.name || 'Неизвестный'; let callerAvatar = call.metadata?.avatar || null;
     $('#call-name').textContent = callerName + ' звонит...'; $('#call-status').textContent = 'Входящий звонок';
@@ -539,9 +564,14 @@ window.startCall = async () => {
   if (!fData) { const snap = await getDoc(doc(db, 'users', activeChat.id)); fData = snap.data(); }
   if (!fData || !fData.peerId) return alert('Друг не в сети.');
   
+  if (!hasMicPermission) {
+    return alert('Сначала нажмите на зеленую кнопку "🎤 Включить микрофон" в правом нижнем углу!');
+  }
+  
   toast('Если висит — сервер просыпается.');
   
-  navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     $('#call-name').textContent = currentFriendName; $('#call-status').textContent = 'Звоним...';
     const av = $('#call-avatar-box');
     if (fData.avatar) { av.style.backgroundImage = `url(${fData.avatar})`; av.textContent = ''; }
@@ -550,7 +580,9 @@ window.startCall = async () => {
     
     activePersonalCall = peer.call(fData.peerId, stream, { metadata: { name: myDisplayName, avatar: myAvatar } });
     setupPersonalCallUI(activePersonalCall);
-  }).catch(() => alert('Нет доступа к микрофону!'));
+  } catch (e) {
+    alert('Ошибка микрофона!');
+  }
 };
 
 function setupPersonalCallUI(call) {
@@ -566,7 +598,6 @@ function setupPersonalCallUI(call) {
 function endCall() { 
   $('#call-ui').classList.remove('on'); 
   if (activePersonalCall) { activePersonalCall.close(); activePersonalCall = null; }
-  // Мы больше не уничтожаем peer, чтобы звонки работали стабильно
 }
 $('#btn-dec').onclick = endCall;
 </script>
