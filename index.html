@@ -14,12 +14,10 @@
 * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
 body { background: var(--bg); color: var(--tx); height: 100vh; display: flex; overflow: hidden; font-size: 15px; }
 
-/* Левая панель */
 #rail { width: 72px; background: var(--rail); display: flex; flex-direction: column; align-items: center; padding: 12px 0; gap: 8px; z-index: 10; }
 .sv { width: 48px; height: 48px; border-radius: 50%; background: var(--bg); display: grid; place-items: center; font-weight: 700; cursor: pointer; transition: .2s; font-size: 20px; }
 .sv.on, .sv:hover { border-radius: 15px; background: var(--br); color: #fff; }
 
-/* Список друзей */
 #side { width: 260px; background: var(--side); display: flex; flex-direction: column; z-index: 5; border-right: 1px solid var(--rail); }
 .hd { height: 54px; display: flex; align-items: center; justify-content: space-between; padding: 0 16px; font-weight: 700; border-bottom: 1px solid var(--rail); font-size: 16px; }
 #chs { flex: 1; overflow-y: auto; padding: 8px; }
@@ -35,7 +33,6 @@ body { background: var(--bg); color: var(--tx); height: 100vh; display: flex; ov
 #logout { background: transparent; color: var(--mu); border: 0; cursor: pointer; font-size: 20px; padding: 4px; transition: .2s; }
 #logout:hover { color: var(--err); }
 
-/* Главная часть */
 #main { flex: 1; display: flex; flex-direction: column; background: var(--bg); position: relative; }
 #chat-header { height: 54px; display: flex; align-items: center; justify-content: space-between; padding: 0 16px; border-bottom: 1px solid var(--rail); box-shadow: 0 1px 2px rgba(0,0,0,0.2); }
 #chat-name { font-weight: 700; font-size: 16px; display: flex; align-items: center; gap: 8px; }
@@ -59,14 +56,12 @@ body { background: var(--bg); color: var(--tx); height: 100vh; display: flex; ov
 #btn-send { background: var(--br); color: #fff; border: 0; border-radius: 10px; padding: 0 20px; cursor: pointer; font-size: 20px; display: grid; place-items: center; transition: .2s; }
 #btn-send:hover { filter: brightness(1.1); }
 
-/* Кнопки */
 button.action { border: 0; border-radius: 6px; padding: 8px 12px; cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 6px; transition: .2s; }
 button.sec { background: var(--in); color: var(--tx); }
 button.sec:hover { background: var(--hov); }
 button.br { background: var(--br); color: #fff; }
 button.br:hover { filter: brightness(1.1); }
 
-/* Модальное окно */
 #modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: none; align-items: center; justify-content: center; z-index: 300; }
 .modal { background: var(--bg); padding: 24px; border-radius: 12px; width: 320px; box-shadow: 0 8px 24px rgba(0,0,0,0.5); }
 .modal h3 { margin-bottom: 16px; font-size: 18px; }
@@ -74,7 +69,6 @@ button.br:hover { filter: brightness(1.1); }
 .modal input:focus { border-color: var(--br); }
 .modal-actions { display: flex; gap: 8px; justify-content: flex-end; }
 
-/* Авторизация */
 #login { position: fixed; inset: 0; background: var(--rail); display: flex; align-items: center; justify-content: center; z-index: 200; }
 .login-box { background: var(--bg); padding: 32px; border-radius: 12px; width: 340px; text-align: center; box-shadow: 0 8px 24px rgba(0,0,0,0.4); }
 .login-box h1 { margin-bottom: 8px; font-size: 24px; }
@@ -85,7 +79,6 @@ button.br:hover { filter: brightness(1.1); }
 .login-box button:hover { filter: brightness(1.1); }
 #login-msg { color: var(--err); font-size: 13px; height: 16px; margin-bottom: 8px; }
 
-/* Звонки */
 #call-ui { position: fixed; inset: 0; background: rgba(0,0,0,0.95); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 100; color: #fff; }
 #call-ui.on { display: flex; }
 #call-avatar { width: 100px; height: 100px; border-radius: 50%; background: var(--br); display: grid; place-items: center; font-size: 40px; font-weight: 700; margin-bottom: 20px; }
@@ -95,6 +88,10 @@ button.br:hover { filter: brightness(1.1); }
 #btn-acc { background: var(--ok); } #btn-acc:hover { filter: brightness(1.1); }
 #btn-mute { background: var(--in); color: var(--tx); } #btn-mute:hover { background: var(--hov); }
 .hidden { display: none !important; }
+
+/* Тосты (уведомления) */
+#toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--br); color: #fff; padding: 12px 24px; border-radius: 8px; font-weight: 600; font-size: 14px; opacity: 0; transition: opacity 0.3s; z-index: 999; pointer-events: none; }
+#toast.show { opacity: 1; }
 
 @media (max-width: 600px) {
   #rail { display: none; }
@@ -106,7 +103,6 @@ button.br:hover { filter: brightness(1.1); }
   .ch { justify-content: center; padding: 8px 0; font-size: 0; }
   .av { margin-right: 0; }
 }
-
 ::-webkit-scrollbar { width: 8px; }
 ::-webkit-scrollbar-thumb { background: var(--rail); border-radius: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
@@ -115,7 +111,6 @@ button.br:hover { filter: brightness(1.1); }
 </head>
 <body>
 
-<!-- Окно входа -->
 <div id="login">
   <div class="login-box">
     <h1>С возвращением!</h1>
@@ -126,7 +121,6 @@ button.br:hover { filter: brightness(1.1); }
   </div>
 </div>
 
-<!-- Окно добавления друга -->
 <div id="modal-bg">
   <div class="modal">
     <h3>Добавить друга</h3>
@@ -187,6 +181,8 @@ button.br:hover { filter: brightness(1.1); }
   </div>
 </div>
 
+<div id="toast">Подождите...</div>
+
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
 import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, doc, setDoc, getDoc, updateDoc, arrayUnion } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
@@ -212,6 +208,14 @@ let peer = null;
 let onlineUsers = {};
 
 const $ = s => document.querySelector(s);
+
+// Утилита для уведомлений
+function toast(msg) {
+  const t = $('#toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 4000);
+}
 
 function getColor(str) {
   let hash = 0;
@@ -291,7 +295,7 @@ function listenOnline() {
 // --- ДРУЗЬЯ ---
 window.renderFriends = async () => {
   const l = $('#chs'); l.innerHTML = '';
-  const uniqueFriends = [...new Set(friends)]; // Убираем дубликаты при отрисовке
+  const uniqueFriends = [...new Set(friends)];
   
   for (const fid of uniqueFriends) {
     const snap = await getDoc(doc(db, 'users', fid));
@@ -401,8 +405,11 @@ window.sendMsg = async () => {
 $('#btn-send').onclick = window.sendMsg;
 $('#in').onkeydown = e => { if (e.key === 'Enter') window.sendMsg(); };
 
-// --- ЗВОНКИ ---
+// --- ЗВОНКИ С ПРОГРЕВОМ СЕРВЕРА ---
 function initPeer() {
+  // Прогрев сервера (отправляем тихий запрос, чтобы Render проснулся)
+  fetch('https://wowch-calls.onrender.com').catch(() => {});
+
   peer = new Peer(myPeerId, {
     host: 'wowch-calls.onrender.com',
     port: 443,
@@ -436,7 +443,9 @@ async function getFriendPeerId(fid) {
 window.startCall = async () => {
   if (!activeFriend) return;
   const fidPeerId = await getFriendPeerId(activeFriend);
-  if (!fidPeerId) return alert('Друг не в сети (не заходил на сайт).');
+  if (!fidPeerId) return alert('Друг не в сети.');
+
+  toast('Если соединение долго висит — сервер просыпается (до 30 сек).');
 
   navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
     $('#call-title').textContent = 'Звоним...';
