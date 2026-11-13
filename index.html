@@ -256,10 +256,8 @@ function playRingtone(type) {
   const playBeep = (freq, duration, timeOffset) => {
     const osc = audioCtx.createOscillator();
     const gain = audioCtx.createGain();
-    osc.connect(gain);
-    gain.connect(audioCtx.destination);
-    osc.type = 'sine';
-    osc.frequency.value = freq;
+    osc.connect(gain); gain.connect(audioCtx.destination);
+    osc.type = 'sine'; osc.frequency.value = freq;
     gain.gain.setValueAtTime(0, audioCtx.currentTime + timeOffset);
     gain.gain.linearRampToValueAtTime(0.1, audioCtx.currentTime + timeOffset + 0.05);
     gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + timeOffset + duration);
@@ -270,10 +268,8 @@ function playRingtone(type) {
   const playPattern = () => {
     if (type === 'outgoing') playBeep(425, 1.0, 0);
     else {
-      playBeep(880, 0.15, 0);
-      playBeep(1046, 0.15, 0.15);
-      playBeep(880, 0.15, 0.3);
-      playBeep(1046, 0.15, 0.45);
+      playBeep(880, 0.15, 0); playBeep(1046, 0.15, 0.15);
+      playBeep(880, 0.15, 0.3); playBeep(1046, 0.15, 0.45);
     }
   };
   playPattern();
@@ -294,7 +290,6 @@ $('#btn-test-mic').onclick = async () => {
     stream.getTracks().forEach(t => t.stop());
   } catch (e) {
     res.style.color = '#da373c'; res.innerText = "❌ Ошибка: " + e.name;
-    alert("Причина: " + e.name);
   }
 };
 
@@ -679,7 +674,7 @@ window.uploadFile = (input) => {
   reader.readAsDataURL(file);
 };
 
-// --- ЛИЧНЫЕ ЗВОНКИ ---
+// --- ЛИЧНЫЕ ЗВОНКИ (ИСПРАВЛЕНА ОШИБКА TypeError) ---
 function initPeer() {
   if (peer) peer.destroy();
   
@@ -729,9 +724,16 @@ function initPeer() {
 
 window.startCall = async () => {
   if (!activeChat || activeChat.type !== 'friend') return;
+  
+  // ЗАЩИТА ОТ ОШИБКИ: Сначала загружаем данные друга
   let fData = usersCache[activeChat.id];
-  if (!fData) { const snap = await getDoc(doc(db, 'users', activeChat.id)); fData = snap.data(); }
-  if (!fData || !fData.peerId) return alert('Друг не в сети.');
+  if (!fData) { 
+    const snap = await getDoc(doc(db, 'users', activeChat.id)); 
+    if (!snap.exists()) return alert('Пользователь не найден');
+    fData = snap.data(); 
+  }
+  
+  if (!fData || !fData.peerId) return alert('Друг не в сети (нет ID подключения).');
   
   if (!hasMicPermission) return alert('Сначала нажмите "🎤 Тест Микрофона"!');
   
