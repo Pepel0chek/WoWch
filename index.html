@@ -23,7 +23,6 @@ button:hover{filter:brightness(1.1)}
 button.sec{background:var(--in);color:var(--tx)}
 #conn{font-size:12px;color:var(--mu);padding:8px 16px;background:var(--side);border-top:1px solid var(--rail)}
 
-/* UI Звонка */
 #call-ui{position:fixed;inset:0;background:rgba(0,0,0,0.9);display:none;flex-direction:column;align-items:center;justify-content:center;z-index:100;color:#fff}
 #call-ui.on{display:flex}
 #call-ui h2{margin-bottom:16px;font-size:24px}
@@ -33,6 +32,7 @@ button.sec{background:var(--in);color:var(--tx)}
 #btn-acc{background:var(--ok)}
 .hidden{display:none!important}
 </style>
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
 </head>
 <body>
 
@@ -58,7 +58,7 @@ button.sec{background:var(--in);color:var(--tx)}
     <input id="in" placeholder="Написать сообщение..." autocomplete="off">
     <button id="btn-send">➤</button>
   </div>
-  <div id="conn">Не подключено</div>
+  <div id="conn">Ожидание подключения...</div>
 </div>
 
 <div id="call-ui">
@@ -71,25 +71,23 @@ button.sec{background:var(--in);color:var(--tx)}
   </div>
 </div>
 
-<!-- Firebase (бесплатный публичный сервер) -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, doc, setDoc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
-// Публичный тестовый конфиг Firebase (можно использовать без регистрации)
+// ТОЧНЫЕ КЛЮЧИ ИЗ ТВОЕГО ПРОЕКТА
 const firebaseConfig = {
-  apiKey: "AIzaSyBqX8rP9nE2Vq7tLmWjK3zYx1cR4vB6sA8",
-  authDomain: "wowch-test.firebaseapp.com",
-  projectId: "wowch-test",
-  storageBucket: "wowch-test.appspot.com",
-  messagingSenderId: "123456789",
-  appId: "1:123456789:web:abcdef123456"
+  apiKey: "AIzaSyD5vrDqL4tGPzpQDLpy4j2vJepPrVAVFzc",
+  authDomain: "wowch-949f8.firebaseapp.com",
+  projectId: "wowch-949f8",
+  storageBucket: "wowch-949f8.firebasestorage.app",
+  messagingSenderId: "1073245247353",
+  appId: "1:1073245247353:web:3f79e21d46e67de4c8d828"
 };
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-// --- СОСТОЯНИЕ ---
 let myId = localStorage.getItem('wowch_uid') || 'user-' + Math.random().toString(36).slice(2,8);
 localStorage.setItem('wowch_uid', myId);
 let peerId = localStorage.getItem('wowch_peer') || 'peer-' + Math.random().toString(36).slice(2,10);
@@ -104,7 +102,6 @@ let muted = false;
 
 const $ = s => document.querySelector(s);
 
-// --- ИНИЦИАЛИЗАЦИЯ PEER (WebRTC) ---
 function initPeer() {
   peer = new Peer(peerId, {
     config: { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] }
@@ -112,12 +109,14 @@ function initPeer() {
 
   peer.on('open', id => {
     $('#my-info').innerHTML = `<b>Ваш ID:</b> ${myId}<br><b>Peer ID:</b> ${id}`;
+    $('#conn').textContent = 'Готов к работе (Звонки и Чат активны)';
+    $('#conn').style.color = 'var(--ok)';
   });
 
   peer.on('call', call => {
     if (currentCall) { call.close(); return; }
     $('#call-title').textContent = 'Входящий звонок';
-    $('#call-status').textContent = 'Принять?';
+    $('#call-status').textContent = 'Нажмите ✅ чтобы принять';
     $('#call-ui').classList.add('on');
     $('#btn-acc').classList.remove('hidden');
     
@@ -150,7 +149,6 @@ function bindCallEvents(call) {
   call.on('error', endCall);
 }
 
-// --- ЗВОНКИ ---
 async function startCall() {
   if (!friendId) return alert('Сначала укажите ID друга (кнопка 🆔).');
   if (currentCall) return;
@@ -177,7 +175,6 @@ function endCall() {
   $('#btn-acc').classList.add('hidden');
 }
 
-// --- ЧАТ (FIREBASE) ---
 function openChat() {
   const target = prompt("Введите ID друга (например, user-abc123):");
   if (!target || target === myId) return;
@@ -187,7 +184,6 @@ function openChat() {
 
   const chatId = [myId, friendId].sort().join('_');
   $('#chat-name').textContent = 'Чат с ' + friendId;
-  $('#conn').textContent = 'Подключено к Firebase';
   
   const q = query(collection(db, 'chats', chatId, 'messages'), orderBy('t', 'asc'));
   unsubMsgs = onSnapshot(q, snap => {
@@ -215,7 +211,6 @@ async function sendMsg() {
   });
 }
 
-// --- СОХРАНЕНИЕ PEER ID ДЛЯ ЗВОНКОВ ---
 async function savePeerId() {
   await setDoc(doc(db, 'peers', myId), { peerId, t: Date.now() });
 }
@@ -225,11 +220,9 @@ async function getFriendPeerId(id) {
   return d.exists() ? d.data().peerId : null;
 }
 
-// --- ЗАПУСК ---
 initPeer();
 savePeerId();
 
-// Слушатели событий
 $('#btn-id').onclick = openChat;
 $('#btn-send').onclick = sendMsg;
 $('#in').onkeydown = e => { if (e.key === 'Enter') sendMsg(); };
