@@ -32,6 +32,7 @@ button.sec{background:var(--in);color:var(--tx)}
 #btn-acc{background:var(--ok)}
 .hidden{display:none!important}
 </style>
+<!-- Подключаем библиотеку для WebRTC (звонки) -->
 <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
 </head>
 <body>
@@ -75,7 +76,7 @@ button.sec{background:var(--in);color:var(--tx)}
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
 import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
-// ТОЧНЫЕ КЛЮЧИ ИЗ ТВОЕГО ПРОЕКТА
+// ТВОИ КЛЮЧИ ИЗ FIREBASE
 const firebaseConfig = {
   apiKey: "AIzaSyD5vrDqL4tGPzpQDLpy4j2vJepPrVAVFzc",
   authDomain: "wowch-949f8.firebaseapp.com",
@@ -102,13 +103,14 @@ let muted = false;
 
 const $ = s => document.querySelector(s);
 
+// Инициализация звонков (с защитой от сбоев)
 function initPeer() {
   peer = new Peer(peerId, {
-    config: { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] }
+    config: { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:global.stun.twilio.com:3478' }] }
   });
 
   peer.on('open', id => {
-    $('#my-info').innerHTML = `<b>Ваш ID:</b> ${myId}<br><b>Peer ID:</b> ${id}`;
+    $('#my-info').innerHTML = `<b>Ваш ID:</b> ${myId}`;
     $('#conn').textContent = 'Готов к работе (Звонки и Чат активны)';
     $('#conn').style.color = 'var(--ok)';
   });
@@ -134,7 +136,7 @@ function initPeer() {
   });
 
   peer.on('error', err => {
-    alert('Ошибка сети: ' + err.type);
+    console.log('Ошибка звонка:', err);
     endCall();
   });
 }
@@ -175,6 +177,7 @@ function endCall() {
   $('#btn-acc').classList.add('hidden');
 }
 
+// Чат (Firebase)
 function openChat() {
   const target = prompt("Введите ID друга (например, user-abc123):");
   if (!target || target === myId) return;
