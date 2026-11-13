@@ -126,9 +126,12 @@ button.sec { background: var(--in); color: var(--tx); } button.sec:hover { backg
 <div id="call-ui"><div id="call-avatar-box">?</div><div id="call-name">Имя...</div><div id="call-status" style="color:#ccc;margin-top:10px;font-size:18px;">Соединение...</div><div id="call-btns"><button id="btn-acc" class="hidden">✅</button><button id="btn-mute">🎤</button><button id="btn-dec">❌</button></div></div>
 <div id="toast"></div>
 
-<!-- Кнопка включения микрофона -->
-<div id="mic-request" style="position:fixed;bottom:20px;right:20px;background:var(--err);color:#fff;padding:16px 24px;border-radius:8px;font-weight:bold;font-size:16px;cursor:pointer;z-index:1000;display:none;box-shadow:0 4px 12px rgba(0,0,0,0.5);">
-  🎤 Включить микрофон
+<!-- Панель теста микрофона -->
+<div id="mic-test-panel" style="position:fixed;bottom:20px;right:20px;display:none;flex-direction:column;gap:10px;z-index:1000;">
+  <button id="btn-test-mic" style="background:var(--br);color:#fff;padding:16px 24px;border-radius:8px;border:0;font-weight:bold;font-size:16px;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,0.5);">
+    🎤 Тест Микрофона
+  </button>
+  <div id="mic-test-result" style="color:#fff;font-weight:bold;text-align:center;font-size:14px;text-shadow:0 1px 3px #000;"></div>
 </div>
 
 <script type="module">
@@ -179,17 +182,21 @@ function createAvatar(name, avatarUrl, statusDot = false, isOnline = false) {
   return av;
 }
 
-// --- ЗАПРОС МИКРОФОНА ---
-$('#mic-request').onclick = async () => {
+// --- ТЕСТ МИКРОФОНА ---
+$('#btn-test-mic').onclick = async () => {
+  const res = $('#mic-test-result');
+  res.style.color = '#faa61a';
+  res.innerText = "Запрос...";
   try {
-    // Запрашиваем поток ТОЛЬКО для проверки
-    const tempStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    tempStream.getTracks().forEach(t => t.stop()); // Сразу выключаем
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    res.style.color = '#23a559';
+    res.innerText = "✅ Микрофон работает!";
     hasMicPermission = true;
-    $('#mic-request').style.display = 'none';
-    toast('Доступ к микрофону получен!');
+    stream.getTracks().forEach(t => t.stop()); // Освобождаем
   } catch (e) {
-    alert('Ошибка доступа к микрофону. Проверьте настройки браузера.');
+    res.style.color = '#da373c';
+    res.innerText = "❌ Ошибка: " + e.name;
+    alert("Точная причина: " + e.name + "\n\nЕсли 'NotAllowedError' — нажми на замочек 🔒 и разреши микрофон.\nЕсли 'NotFoundError' — микрофон не подключен.");
   }
 };
 
@@ -221,7 +228,8 @@ window.login = async () => {
   localStorage.setItem('wowch_name', name);
   
   $('#login').style.display = 'none'; $('#rail').style.display = 'flex'; $('#side').style.display = 'flex'; $('#main').style.display = 'flex';
-  $('#mic-request').style.display = 'block'; // Показываем кнопку запроса микрофона
+  
+  $('#mic-test-panel').style.display = 'flex'; // Показываем панель теста
   
   updateMyUI();
 
@@ -348,7 +356,7 @@ function renderServerChannels() {
 // --- ГОЛОСОВЫЕ КАНАЛЫ ---
 async function joinVoice(sid, cid) {
   if (!hasMicPermission) {
-    return alert('Сначала нажмите на кнопку "🎤 Включить микрофон" в правом нижнем углу!');
+    return alert('Сначала нажмите на кнопку "🎤 Тест Микрофона" в правом нижнем углу и разрешите доступ!');
   }
   if (currentVoiceChannel === `${sid}_${cid}`) { leaveVoice(); return; }
   if (currentVoiceChannel) leaveVoice();
@@ -391,12 +399,15 @@ function listenVoice(sid) {
         
         if (currentVoiceChannel === `${sid}_${c.id}` && uid !== myId && u.peerId) {
           if (!activeCalls[uid]) {
-            // Звонит только тот, у кого ID "меньше", чтобы избежать двойных вызовов
+            // Звонит только "старший" (по алфавиту), чтобы не было двойных вызовов
             if (myId < uid) {
               navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
                 const call = peer.call(u.peerId, stream, { metadata: { name: myDisplayName, avatar: myAvatar } });
                 setupVoiceCall(call, uid);
-              }).catch(e => console.log('Mic err:', e));
+              }).catch(e => {
+                console.log('Mic err:', e);
+                alert('Ошибка микрофона при звонке в канал: ' + e.name);
+              });
             }
           }
         }
@@ -509,7 +520,7 @@ window.uploadFile = (input) => {
   reader.readAsDataURL(file);
 };
 
-// --- ЗВОНКИ ---
+// --- ЛИЧНЫЕ ЗВОНКИ ---
 function initPeer() {
   if (peer) peer.destroy();
   
@@ -522,7 +533,6 @@ function initPeer() {
   peer.on('error', err => console.log('Ошибка PeerJS:', err.type));
   
   peer.on('call', call => {
-    // Автоответ для каналов
     if (currentVoiceChannel && call.metadata && call.metadata.name) {
       navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
         call.answer(stream);
@@ -531,7 +541,6 @@ function initPeer() {
       return;
     }
 
-    // Личный звонок
     if (activePersonalCall) { call.close(); return; }
     
     let callerName = call.metadata?.name || 'Неизвестный'; let callerAvatar = call.metadata?.avatar || null;
@@ -563,7 +572,7 @@ window.startCall = async () => {
   if (!fData || !fData.peerId) return alert('Друг не в сети.');
   
   if (!hasMicPermission) {
-    return alert('Сначала нажмите на кнопку "🎤 Включить микрофон" в правом нижнем углу!');
+    return alert('Сначала нажмите на кнопку "🎤 Тест Микрофона" в правом нижнем углу!');
   }
   
   toast('Звоним...');
@@ -580,7 +589,7 @@ window.startCall = async () => {
     activePersonalCall = peer.call(fData.peerId, stream, { metadata: { name: myDisplayName, avatar: myAvatar } });
     setupPersonalCallUI(activePersonalCall);
   } catch (e) {
-    alert('Ошибка доступа к микрофону! Убедитесь, что он не занят другой программой.');
+    alert('Ошибка доступа к микрофону! Код: ' + e.name);
   }
 };
 
