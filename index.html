@@ -1,437 +1,251 @@
 <!DOCTYPE html>
-<html lang="ru" data-theme="dark">
+<html lang="ru">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>WoWCh</title>
-<meta name="theme-color" content="#5865f2">
-<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
 <style>
-:root{
-  --rail:#e3e5e8;--side:#f2f3f5;--bg:#fff;--hov:#e3e5e8;--tx:#2e3338;--mu:#5c5e66;
-  --in:#ebedef;--bd:#d9dbde;--br:#5865f2;--danger:#da373c;--ok:#23a559;
-  color-scheme:light; padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
-}
-@media(prefers-color-scheme:dark){:root:not([data-theme=light]){
-  --rail:#1e1f22;--side:#2b2d31;--bg:#313338;--hov:#3a3c43;--tx:#dbdee1;--mu:#9aa1ab;
-  --in:#383a40;--bd:#3f4147;color-scheme:dark;
-}}
-:root[data-theme=dark]{
-  --rail:#1e1f22;--side:#2b2d31;--bg:#313338;--hov:#3a3c43;--tx:#dbdee1;--mu:#9aa1ab;
-  --in:#383a40;--bd:#3f4147;color-scheme:dark;
-}
-*{box-sizing:border-box;margin:0}
-html,body{height:100%}
-body{background:var(--rail);color:var(--tx);font:16px/1.375 'gg sans','Noto Sans','Segoe UI',Arial,sans-serif;overflow:hidden;-webkit-font-smoothing:antialiased}
-button,input,textarea{font:inherit;color:inherit}
-button{background:none;border:0;cursor:pointer;touch-action:manipulation}
-#app{display:flex;height:100%;position:relative;overflow:hidden}
-
-#rail{width:72px;display:flex;flex-direction:column;align-items:center;gap:8px;padding:12px 0;overflow-y:auto;flex:none;background:var(--rail)}
-.sv{width:48px;height:48px;border-radius:50%;background:var(--bg);display:grid;place-items:center;font-weight:700;flex:none;transition:.15s;position:relative}
-.sv:hover,.sv.on{border-radius:15px;background:var(--br);color:#fff}
-.sv.hm2{background:var(--br);color:#fff;font-size:24px;font-weight:800}
-.sv.ad{color:var(--ok);font-size:24px}.sv.ad:hover{background:var(--ok);color:#fff}
-
-#side{width:240px;background:var(--side);display:flex;flex-direction:column;flex:none;position:relative}
-.hd{height:48px;padding:0 12px;display:flex;align-items:center;gap:8px;font-weight:700;flex:none}
-#side .hd{box-shadow:0 1px 0 rgba(0,0,0,.2);gap:8px}
-.g{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-#chs{flex:1;overflow-y:auto;padding:6px 8px}
-.ch{display:flex;width:100%;align-items:center;gap:8px;padding:6px 8px;border-radius:4px;color:var(--mu);text-align:left;font-weight:500}
-.ch:hover,.ch.on{background:var(--hov);color:var(--tx)}
-#me{height:54px;background:color-mix(in srgb,var(--rail) 60%,var(--side));display:flex;align-items:center;gap:6px;padding:0 8px;flex:none}
-#me .nm{flex:1;min-width:0;line-height:1.2;text-align:left;font-weight:600;overflow:hidden;white-space:nowrap}
-.av{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;color:#fff;font-weight:700;flex:none;position:relative}
-.av.s{width:32px;height:32px;font-size:13px}
-
-#main{flex:1;min-width:0;background:var(--bg);display:flex;flex-direction:column}
-#hd button{color:var(--mu);display:grid;place-items:center}
-#hd button:hover{color:var(--tx)}
-#hd button svg{width:24px;height:24px}
-#cn{display:flex;align-items:center;gap:8px;font-weight:600}
-#sq{background:var(--in);border:0;border-radius:4px;padding:4px 8px;width:160px;outline:0;font-size:14px;font-weight:400;color:var(--tx)}
-#msgs{flex:1;overflow-y:auto;padding:8px 0 12px}
-.wl{padding:16px}.wl div,.mu{color:var(--mu)}
-.m{padding:2px 48px 2px 72px;position:relative;white-space:pre-wrap;word-break:break-word}
-.m.h{margin-top:14px}
-.m.h .av{position:absolute;left:16px;top:2px}
-.m:hover{background:rgba(0,0,0,.06)}
-.nmx{font-weight:500;color:var(--tx)}
-.ts{font-size:12px;color:var(--mu);margin-left:6px;font-weight:400}
-code{background:var(--in);padding:0 4px;border-radius:3px;font-family:monospace}
-.mn{background:rgba(88,101,242,.25);border-radius:3px;padding:0 2px}
-.m img{max-width:min(320px,100%);max-height:320px;border-radius:6px;display:block;margin-top:4px}
-
-#bar{padding:0 16px 16px;flex:none;position:relative}
-#cmp{display:flex;align-items:flex-end;gap:12px;background:var(--in);border-radius:8px;padding:0 12px;min-height:44px}
-#cmp button{font-size:20px;padding:6px 4px;color:var(--mu);display:grid;place-items:center}
-#cmp button:hover{color:var(--tx)}
-#cmp button svg{width:24px;height:24px}
-#in{flex:1;background:none;border:0;outline:0;resize:none;padding:11px 4px;max-height:140px;font-size:16px;line-height:1.35;color:var(--tx)}
-
-#md{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;place-items:center;z-index:9;padding:16px}
-#mb{background:var(--bg);border-radius:8px;padding:20px;width:min(380px,100%);max-height:90%;overflow-y:auto}
-#mb h3{margin-bottom:12px}
-#mb label{font-size:12px;font-weight:700;color:var(--mu);text-transform:uppercase;display:block;margin-top:10px}
-#mb input[type=text]{width:100%;background:var(--in);border:0;border-radius:4px;padding:10px;outline:0;margin:6px 0 8px;font-size:16px;color:var(--tx)}
-.btn{background:var(--br);color:#fff;border-radius:4px;padding:8px 14px}
-.btn.g{background:var(--hov);color:var(--tx)}
-#toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--side);border:1px solid var(--bd);border-radius:6px;padding:8px 14px;font-size:13px;display:none;z-index:10;max-width:90%}
+:root{--bg:#313338;--side:#2b2d31;--rail:#1e1f22;--tx:#dbdee1;--mu:#949ba4;--in:#383a40;--hov:#3a3c43;--br:#5865f2;--ok:#23a559;--err:#da373c}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--tx);font:15px/1.4 Arial,sans-serif;height:100vh;display:flex;overflow:hidden}
+#side{width:260px;background:var(--side);display:flex;flex-direction:column;border-right:1px solid var(--rail)}
+.hd{height:50px;display:flex;align-items:center;justify-content:space-between;padding:0 16px;font-weight:700;border-bottom:1px solid var(--rail)}
+#main{flex:1;display:flex;flex-direction:column}
+#msgs{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px}
+.msg{padding:8px 12px;border-radius:8px;max-width:80%;word-break:break-word}
+.msg.me{background:var(--br);color:#fff;align-self:flex-end}
+.msg.them{background:var(--rail);align-self:flex-start}
+.msg .nm{font-size:12px;font-weight:700;opacity:0.7;margin-bottom:4px}
+#bar{padding:16px;background:var(--side);display:flex;gap:12px}
+#in{flex:1;background:var(--in);border:0;border-radius:8px;padding:12px;color:var(--tx);outline:0;font-size:15px}
+button{background:var(--br);color:#fff;border:0;border-radius:8px;padding:10px 16px;cursor:pointer;font-weight:600;display:grid;place-items:center}
+button:hover{filter:brightness(1.1)}
+button.sec{background:var(--in);color:var(--tx)}
+#conn{font-size:12px;color:var(--mu);padding:8px 16px;background:var(--side);border-top:1px solid var(--rail)}
 
 /* UI Звонка */
-#call-ui{position:fixed;inset:0;background:#000;display:none;flex-direction:column;align-items:center;justify-content:center;z-index:100;color:#fff}
+#call-ui{position:fixed;inset:0;background:rgba(0,0,0,0.9);display:none;flex-direction:column;align-items:center;justify-content:center;z-index:100;color:#fff}
 #call-ui.on{display:flex}
-#call-name{font-size:28px;margin:20px 0;font-weight:600}
-#call-status{color:#aaa;margin-bottom:40px;font-size:16px}
-#call-btns{display:flex;gap:20px}
-#call-btns button{width:64px;height:64px;border-radius:50%;display:grid;place-items:center;font-size:24px}
-.cb-dec{background:#da373c;color:#fff}.cb-dec:hover{background:#c02c31}
-.cb-mute{background:rgba(255,255,255,.2);color:#fff}.cb-mute:hover{background:rgba(255,255,255,.3)}
-
-@media(max-width:760px){
-  #rail,#side{position:absolute;top:0;bottom:0;z-index:5;transition:transform .2s}
-  #rail{left:0;transform:translateX(-72px)}
-  #side{left:72px;transform:translateX(-312px)}
-  body.L #rail,body.L #side{transform:none}
-  .m{padding-left:64px}
-}
+#call-ui h2{margin-bottom:16px;font-size:24px}
+#call-btns{display:flex;gap:16px;margin-top:32px}
+#call-btns button{width:64px;height:64px;border-radius:50%;font-size:24px;padding:0}
+#btn-dec{background:var(--err)}
+#btn-acc{background:var(--ok)}
+.hidden{display:none!important}
 </style>
 </head>
 <body>
-<div id="app">
-  <nav id="rail">
-    <button class="sv hm2 on">W</button>
-  </nav>
-  <aside id="side">
-    <div class="hd"><span id="sn" class="g">WoWCh</span></div>
-    <div id="chs"></div>
-    <div id="me"></div>
-  </aside>
-  <section id="main">
-    <div class="hd" id="hd">
-      <button class="hm" id="hb" style="display:none">☰</button>
-      <span id="cn" class="g"></span>
-      <input id="sq" placeholder="Поиск">
-      <button id="call-btn" title="Позвонить">📞</button>
-      <button id="my-id-btn" title="Мой ID">🆔</button>
-    </div>
-    <div id="msgs"></div>
-    <div id="bar">
-      <div id="cmp">
-        <button id="at" title="Загрузить картинку">+</button>
-        <textarea id="in" rows="1" placeholder="Написать сообщение…"></textarea>
-        <button id="em" title="Эмодзи">😀</button>
-        <button id="go" title="Отправить">➤</button>
-      </div>
-    </div>
-    <input type="file" id="fi" accept="image/*" hidden>
-  </section>
-</div>
-<div id="md"><div id="mb"></div></div>
-<div id="toast"></div>
 
-<div id="call-ui">
-  <div id="call-name">...</div>
-  <div id="call-status">...</div>
-  <div id="call-btns">
-    <button id="btn-mute" class="cb-mute">🎤</button>
-    <button id="btn-dec" class="cb-dec">❌</button>
+<div id="side">
+  <div class="hd">
+    <span>WoWCh</span>
+    <button id="btn-id" style="padding:4px 8px;font-size:12px">🆔 Мой ID</button>
+  </div>
+  <div style="padding:16px;color:var(--mu);font-size:14px" id="my-info">
+    Загрузка...
   </div>
 </div>
 
-<script>
-'use strict';
-const $ = s => document.querySelector(s);
-const E = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
-const rid = () => Math.random().toString(36).slice(2, 8);
-const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+<div id="main">
+  <div class="hd">
+    <span id="chat-name">Чат</span>
+    <button id="btn-call" class="sec">📞 Звонок</button>
+  </div>
+  <div id="msgs">
+    <div style="color:var(--mu);text-align:center;margin-top:20px">Нажмите «🆔 Мой ID», чтобы начать.</div>
+  </div>
+  <div id="bar">
+    <input id="in" placeholder="Написать сообщение..." autocomplete="off">
+    <button id="btn-send">➤</button>
+  </div>
+  <div id="conn">Не подключено</div>
+</div>
 
-const IC = {
-  phone:`<path d='M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z'/>`,
-  id:`<rect x='3' y='4' width='18' height='16' rx='2'/><circle cx='9' cy='10' r='2'/><path d='M15 8h2M15 12h2M7 16h10'/>`,
-  send:`<path d='M22 2 11 13M22 2l-7 20-4-9-9-4z'/>`,
-  smile:`<circle cx='12' cy='12' r='10'/><path d='M8 14s1.5 2 4 2 4-2 4-2M9 9h.01M15 9h.01'/>`
+<div id="call-ui">
+  <h2 id="call-title">Звонок...</h2>
+  <div style="color:#aaa" id="call-status">Соединение...</div>
+  <div id="call-btns">
+    <button id="btn-acc" class="hidden">✅</button>
+    <button id="btn-mute">🎤</button>
+    <button id="btn-dec">❌</button>
+  </div>
+</div>
+
+<!-- Firebase (бесплатный публичный сервер) -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, doc, setDoc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+
+// Публичный тестовый конфиг Firebase (можно использовать без регистрации)
+const firebaseConfig = {
+  apiKey: "AIzaSyBqX8rP9nE2Vq7tLmWjK3zYx1cR4vB6sA8",
+  authDomain: "wowch-test.firebaseapp.com",
+  projectId: "wowch-test",
+  storageBucket: "wowch-test.appspot.com",
+  messagingSenderId: "123456789",
+  appId: "1:123456789:web:abcdef123456"
 };
-const ic = (n) => `<svg viewBox='0 0 24 24' width='24' height='24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'>${IC[n] || ''}</svg>`;
 
-let myPeerId = localStorage.getItem('wowch_peer_id') || 'wowch-' + rid() + rid();
-localStorage.setItem('wowch_peer_id', myPeerId);
-let myName = localStorage.getItem('wowch_name') || 'Гость-' + myPeerId.slice(-4);
-localStorage.setItem('wowch_name', myName);
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
 
+// --- СОСТОЯНИЕ ---
+let myId = localStorage.getItem('wowch_uid') || 'user-' + Math.random().toString(36).slice(2,8);
+localStorage.setItem('wowch_uid', myId);
+let peerId = localStorage.getItem('wowch_peer') || 'peer-' + Math.random().toString(36).slice(2,10);
+localStorage.setItem('wowch_peer', peerId);
+
+let friendId = null;
+let unsubMsgs = null;
 let peer = null;
 let currentCall = null;
 let micStream = null;
 let muted = false;
-let targetContact = null; // ID собеседника
-let msgs = {}; // { contactId: [messages] }
 
-try { msgs = JSON.parse(localStorage.getItem('wowch_msgs') || '{}'); } catch { msgs = {}; }
+const $ = s => document.querySelector(s);
 
-// Инициализация PeerJS
+// --- ИНИЦИАЛИЗАЦИЯ PEER (WebRTC) ---
 function initPeer() {
-  peer = new Peer(myPeerId);
-  peer.on('open', () => console.log('Мой ID:', myPeerId));
-  peer.on('error', err => {
-    if (err.type === 'unavailable-id') toast('ID занят. Перезагрузите страницу.');
-    else if (err.type === 'peer-unavailable') toast('Собеседник не в сети.');
+  peer = new Peer(peerId, {
+    config: { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] }
   });
 
-  // Входящий звонок — принимаем СРАЗУ
+  peer.on('open', id => {
+    $('#my-info').innerHTML = `<b>Ваш ID:</b> ${myId}<br><b>Peer ID:</b> ${id}`;
+  });
+
   peer.on('call', call => {
     if (currentCall) { call.close(); return; }
-    autoAnswer(call);
-  });
-
-  // Входящие сообщения
-  peer.on('connection', conn => {
-    conn.on('data', data => {
-      if (data.type === 'msg') {
-        const from = data.from;
-        if (!msgs[from]) msgs[from] = [];
-        msgs[from].push(data.msg);
-        localStorage.setItem('wowch_msgs', JSON.stringify(msgs));
-        
-        if (targetContact === from) {
-          renderMessages();
-        } else {
-          toast('Новое сообщение от ' + data.msg.name);
-        }
-        targetContact = from;
-        renderSidebar();
-      }
-    });
-  });
-}
-
-async function autoAnswer(call) {
-  try {
-    micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    call.answer(micStream);
-    currentCall = call;
-
-    $('#call-name').textContent = 'Звонок: ' + call.peer.slice(0, 10);
-    $('#call-status').textContent = 'Соединение...';
+    $('#call-title').textContent = 'Входящий звонок';
+    $('#call-status').textContent = 'Принять?';
     $('#call-ui').classList.add('on');
+    $('#btn-acc').classList.remove('hidden');
+    
+    $('#btn-acc').onclick = () => {
+      navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
+        micStream = stream;
+        call.answer(stream);
+        currentCall = call;
+        $('#btn-acc').classList.add('hidden');
+        $('#call-title').textContent = 'Разговор';
+        $('#call-status').textContent = 'Соединено';
+        bindCallEvents(call);
+      }).catch(err => { alert('Нет доступа к микрофону'); call.close(); });
+    };
+  });
 
-    call.on('stream', remote => {
-      $('#call-status').textContent = 'Разговор';
-      const audio = new Audio();
-      audio.srcObject = remote;
-      audio.play();
-    });
-
-    call.on('close', endCall);
-    call.on('error', () => endCall());
-  } catch (e) {
-    toast('Нет доступа к микрофону');
-    call.close();
-  }
+  peer.on('error', err => {
+    alert('Ошибка сети: ' + err.type);
+    endCall();
+  });
 }
 
-async function startCall() {
-  if (!targetContact) return toast('Сначала укажите ID собеседника (кнопка 🆔).');
-  if (currentCall) return toast('Вы уже в звонке.');
-
-  try {
-    micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-  } catch (e) {
-    return toast('Нет микрофона');
-  }
-
-  $('#call-name').textContent = 'Звонок: ' + targetContact.slice(0, 10);
-  $('#call-status').textContent = 'Вызов...';
-  $('#call-ui').classList.add('on');
-
-  currentCall = peer.call(targetContact, micStream);
-  
-  currentCall.on('stream', remote => {
-    $('#call-status').textContent = 'Разговор';
+function bindCallEvents(call) {
+  call.on('stream', remoteStream => {
     const audio = new Audio();
-    audio.srcObject = remote;
+    audio.srcObject = remoteStream;
     audio.play();
   });
+  call.on('close', endCall);
+  call.on('error', endCall);
+}
 
-  currentCall.on('close', endCall);
-  currentCall.on('error', () => { toast('Ошибка соединения'); endCall(); });
+// --- ЗВОНКИ ---
+async function startCall() {
+  if (!friendId) return alert('Сначала укажите ID друга (кнопка 🆔).');
+  if (currentCall) return;
+  if (!peer) initPeer();
+
+  try {
+    micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  } catch (e) {
+    return alert('Нет доступа к микрофону');
+  }
+
+  const friendPeerId = localStorage.getItem('peer_' + friendId) || friendId;
+  $('#call-title').textContent = 'Звоним...';
+  $('#call-ui').classList.add('on');
+
+  currentCall = peer.call(friendPeerId, micStream);
+  bindCallEvents(currentCall);
 }
 
 function endCall() {
   if (currentCall) { currentCall.close(); currentCall = null; }
   if (micStream) { micStream.getTracks().forEach(t => t.stop()); micStream = null; }
   $('#call-ui').classList.remove('on');
-  muted = false;
-  $('#btn-mute').style.opacity = 1;
+  $('#btn-acc').classList.add('hidden');
 }
 
-function toast(msg) {
-  const t = $('#toast'); t.textContent = msg; t.style.display = 'block';
-  setTimeout(() => { t.style.display = 'none'; }, 3000);
-}
+// --- ЧАТ (FIREBASE) ---
+function openChat() {
+  const target = prompt("Введите ID друга (например, user-abc123):");
+  if (!target || target === myId) return;
+  friendId = target;
+  localStorage.setItem('friend_id', friendId);
+  if (unsubMsgs) unsubMsgs();
 
-function fmt(text) {
-  let s = esc(text);
-  s = s.replace(/\*\*(.+?)\*\*/g, '<b>$1</b>')
-       .replace(/\*(.+?)\*/g, '<i>$1</i>')
-       .replace(/`([^`]+)`/g, '<code>$1</code>')
-       .replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" style="color:#2f6fdc">$1</a>')
-       .replace(/@(\w+)/g, '<span class="mn">@$1</span>');
-  return s;
-}
-
-function av(name) {
-  const a = E('div', 'av s', name[0].toUpperCase());
-  a.style.background = `hsl(${(name.charCodeAt(0) * 7) % 360} 55% 45%)`;
-  return a;
-}
-
-function renderSidebar() {
-  const l = $('#chs'); l.replaceChildren();
+  const chatId = [myId, friendId].sort().join('_');
+  $('#chat-name').textContent = 'Чат с ' + friendId;
+  $('#conn').textContent = 'Подключено к Firebase';
   
-  const g = E('button', 'ch' + (!targetContact ? ' on' : ''), '# общий');
-  g.onclick = () => { targetContact = null; renderMessages(); renderSidebar(); };
-  l.append(g);
-
-  if (targetContact) {
-    const d = E('button', 'ch on', '@ ' + targetContact.slice(0, 10));
-    d.onclick = () => { renderMessages(); };
-    l.append(d);
-  }
-
-  const me = $('#me'); me.replaceChildren();
-  const info = E('div'); info.style.flex = '1';
-  info.append(E('div', '', myName), E('div', '', 'ID: ' + myPeerId.slice(-6)));
-  info.style.cssText = 'font-size:12px;color:var(--mu);overflow:hidden;line-height:1.2';
-  me.append(av(myName), info);
-}
-
-function renderMessages() {
-  const L = $('#msgs'); L.replaceChildren();
-  const list = targetContact ? (msgs[targetContact] || []) : [];
-  
-  $('#cn').textContent = targetContact ? '@ ' + targetContact.slice(0, 10) : '# общий';
-  $('#call-btn').style.display = targetContact ? 'grid' : 'none';
-
-  if (!list.length) {
-    L.append(E('div', 'wl', 'Нет сообщений.'));
-    return;
-  }
-  
-  list.forEach(m => {
-    const e = E('div', 'm h');
-    e.append(av(m.name));
-    const h = E('div');
-    h.append(E('span', 'nmx', m.name), E('span', 'ts', new Date(m.t).toLocaleTimeString('ru', {hour:'2-digit',minute:'2-digit'})));
-    e.append(h);
-    const body = E('div'); body.innerHTML = fmt(m.text); e.append(body);
-    L.append(e);
+  const q = query(collection(db, 'chats', chatId, 'messages'), orderBy('t', 'asc'));
+  unsubMsgs = onSnapshot(q, snap => {
+    const msgs = $('#msgs');
+    msgs.innerHTML = '';
+    snap.forEach(doc => {
+      const m = doc.data();
+      const div = document.createElement('div');
+      div.className = 'msg ' + (m.uid === myId ? 'me' : 'them');
+      div.innerHTML = `<div class="nm">${m.name}</div>${m.text}`;
+      msgs.append(div);
+    });
+    msgs.scrollTop = msgs.scrollHeight;
   });
-  L.scrollTop = L.scrollHeight;
 }
 
-function send() {
-  const i = $('#in'); const text = i.value.trim();
-  if (!text) return;
-  if (!targetContact) return toast('Укажите ID собеседника (кнопка 🆔).');
-  
-  const msg = { id: rid(), name: myName, text, t: Date.now() };
-  if (!msgs[targetContact]) msgs[targetContact] = [];
-  msgs[targetContact].push(msg);
-  localStorage.setItem('wowch_msgs', JSON.stringify(msgs));
-  i.value = ''; i.style.height = 'auto';
-  renderMessages();
-
-  const conn = peer.connect(targetContact, { metadata: { name: myName } });
-  conn.on('open', () => {
-    conn.send({ type: 'msg', from: myPeerId, msg });
-    setTimeout(() => conn.close(), 1000);
+async function sendMsg() {
+  const inp = $('#in');
+  const text = inp.value.trim();
+  if (!text || !friendId) return;
+  inp.value = '';
+  const chatId = [myId, friendId].sort().join('_');
+  await addDoc(collection(db, 'chats', chatId, 'messages'), {
+    uid: myId, name: myId, text, t: Date.now()
   });
-  conn.on('error', () => toast('Не удалось доставить сообщение.'));
 }
 
-$('#go').onclick = send;
-$('#in').onkeydown = e => { if (e.key === 'Enter' && !e.shiftKey && !/Mobi|Android/i.test(navigator.userAgent)) { e.preventDefault(); send(); } };
-$('#in').oninput = () => { const i = $('#in'); i.style.height = 'auto'; i.style.height = Math.min(i.scrollHeight, 140) + 'px'; };
+// --- СОХРАНЕНИЕ PEER ID ДЛЯ ЗВОНКОВ ---
+async function savePeerId() {
+  await setDoc(doc(db, 'peers', myId), { peerId, t: Date.now() });
+}
 
-$('#md').onclick = e => { if (e.target.id === 'md') $('#md').style.display = 'none'; };
-$('#hb').onclick = () => document.body.classList.toggle('L');
+async function getFriendPeerId(id) {
+  const d = await getDoc(doc(db, 'peers', id));
+  return d.exists() ? d.data().peerId : null;
+}
 
-// Кнопки звонка
-$('#call-btn').onclick = startCall;
+// --- ЗАПУСК ---
+initPeer();
+savePeerId();
+
+// Слушатели событий
+$('#btn-id').onclick = openChat;
+$('#btn-send').onclick = sendMsg;
+$('#in').onkeydown = e => { if (e.key === 'Enter') sendMsg(); };
+$('#btn-call').onclick = async () => {
+  if (!friendId) return openChat();
+  const fp = await getFriendPeerId(friendId);
+  if (!fp) return alert('Друг еще не заходил в приложение. Его Peer ID не найден.');
+  localStorage.setItem('peer_' + friendId, fp);
+  startCall();
+};
 $('#btn-dec').onclick = endCall;
 $('#btn-mute').onclick = () => {
   muted = !muted;
   if (micStream) micStream.getAudioTracks().forEach(t => t.enabled = !muted);
-  $('#btn-mute').style.opacity = muted ? 0.5 : 1;
   $('#btn-mute').textContent = muted ? '🔇' : '🎤';
 };
-
-// ID модалка
-$('#my-id-btn').onclick = () => {
-  const b = $('#mb'); b.replaceChildren(E('h3', '', 'Ваш ID и подключение'));
-  
-  b.append(E('label', '', 'Ваш ID (отправьте другу)'));
-  const myIn = E('input'); myIn.type = 'text'; myIn.value = myPeerId; myIn.readOnly = true;
-  b.append(myIn);
-  
-  b.append(E('label', '', 'ID собеседника'));
-  const tarIn = E('input'); tarIn.type = 'text'; tarIn.placeholder = 'wowch-...';
-  b.append(tarIn);
-  
-  const btn = E('button', 'btn', 'Подключиться');
-  btn.style.marginTop = '12px';
-  btn.onclick = () => {
-    const t = tarIn.value.trim();
-    if (t) { targetContact = t; renderSidebar(); renderMessages(); $('#md').style.display = 'none'; }
-  };
-  b.append(btn);
-  
-  $('#md').style.display = 'grid';
-  tarIn.focus();
-};
-
-// Эмодзи
-const EM = '😀😂😍😎🤔😭😡👍👎❤️🔥🎉👀🙏💀✅❌😱🤝🎮🎧⭐💯😴🤣🥳😅🙌👏💪🍕☕🌈🚀⚡🎲'.match(/\p{Extended_Pictographic}\uFE0F?/gu);
-$('#em').onclick = () => {
-  let p = document.getElementById('pk');
-  if (!p) {
-    p = E('div'); p.id = 'pk';
-    p.style.cssText = 'position:fixed;left:50%;bottom:80px;transform:translateX(-50%);background:var(--side);border:1px solid var(--bd);border-radius:8px;padding:8px;display:grid;grid-template-columns:repeat(8,1fr);gap:2px;z-index:8;width:min(330px,94%)';
-    EM.forEach(em => {
-      const b = E('button', '', em); b.style.cssText='font-size:22px;padding:4px;border-radius:4px';
-      b.onclick = () => { $('#in').value += em; p.style.display='none'; };
-      p.append(b);
-    });
-    document.body.append(p);
-  }
-  p.style.display = p.style.display === 'grid' ? 'none' : 'grid';
-};
-
-// Иконки
-$('#go').innerHTML = ic('send');
-$('#em').innerHTML = ic('smile');
-$('#call-btn').innerHTML = ic('phone');
-$('#my-id-btn').innerHTML = ic('id');
-$('#at').innerHTML = '+';
-
-// Загрузка картинок
-$('#at').onclick = () => $('#fi').click();
-$('#fi').onchange = e => {
-  const f = e.target.files[0]; e.target.value = ''; if (!f) return;
-  if (f.size > 500000) return toast('Максимум 500 КБ');
-  const fr = new FileReader();
-  fr.onload = () => {
-    $('#in').value += '[img]' + fr.result + '[/img]';
-    toast('Картинка вставлена в текст.');
-  };
-  fr.readAsDataURL(f);
-};
-
-// Старт
-initPeer();
-renderSidebar();
-renderMessages();
 </script>
 </body>
-  </html>
+</html>
