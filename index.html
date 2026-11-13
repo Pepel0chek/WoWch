@@ -32,8 +32,6 @@ button.sec{background:var(--in);color:var(--tx)}
 #btn-acc{background:var(--ok)}
 .hidden{display:none!important}
 </style>
-<!-- Подключаем библиотеку для WebRTC (звонки) -->
-<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
 </head>
 <body>
 
@@ -42,9 +40,7 @@ button.sec{background:var(--in);color:var(--tx)}
     <span>WoWCh</span>
     <button id="btn-id" style="padding:4px 8px;font-size:12px">🆔 Мой ID</button>
   </div>
-  <div style="padding:16px;color:var(--mu);font-size:14px" id="my-info">
-    Загрузка...
-  </div>
+  <div style="padding:16px;color:var(--mu);font-size:14px" id="my-info">Загрузка...</div>
 </div>
 
 <div id="main">
@@ -59,7 +55,7 @@ button.sec{background:var(--in);color:var(--tx)}
     <input id="in" placeholder="Написать сообщение..." autocomplete="off">
     <button id="btn-send">➤</button>
   </div>
-  <div id="conn">Ожидание подключения...</div>
+  <div id="conn">Подключение к базе...</div>
 </div>
 
 <div id="call-ui">
@@ -74,9 +70,8 @@ button.sec{background:var(--in);color:var(--tx)}
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, doc, setDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
-// ТВОИ КЛЮЧИ ИЗ FIREBASE
 const firebaseConfig = {
   apiKey: "AIzaSyD5vrDqL4tGPzpQDLpy4j2vJepPrVAVFzc",
   authDomain: "wowch-949f8.firebaseapp.com",
@@ -89,108 +84,44 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-let myId = localStorage.getItem('wowch_uid') || 'user-' + Math.random().toString(36).slice(2,8);
+let myId = localStorage.getItem('wowch_uid') || 'user-' + Math.random().toString(36).slice(2,6);
 localStorage.setItem('wowch_uid', myId);
-let peerId = localStorage.getItem('wowch_peer') || 'peer-' + Math.random().toString(36).slice(2,10);
-localStorage.setItem('wowch_peer', peerId);
-
-let friendId = null;
+let friendId = localStorage.getItem('friend_id');
 let unsubMsgs = null;
-let peer = null;
-let currentCall = null;
+
+let pc = null;
 let micStream = null;
-let muted = false;
+let currentCallId = null;
+let unsubCall = null;
+let unsubCandidates = null;
 
 const $ = s => document.querySelector(s);
 
-// Инициализация звонков (с защитой от сбоев)
-function initPeer() {
-  peer = new Peer(peerId, {
-    config: { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:global.stun.twilio.com:3478' }] }
-  });
+// --- ЧАТ ---
+document.getElementById('my-info').innerHTML = `<b>Ваш ID:</b> ${myId}`;
+document.getElementById('conn').textContent = 'Готов к работе';
+document.getElementById('conn').style.color = 'var(--ok)';
 
-  peer.on('open', id => {
-    $('#my-info').innerHTML = `<b>Ваш ID:</b> ${myId}`;
-    $('#conn').textContent = 'Готов к работе (Звонки и Чат активны)';
-    $('#conn').style.color = 'var(--ok)';
-  });
-
-  peer.on('call', call => {
-    if (currentCall) { call.close(); return; }
-    $('#call-title').textContent = 'Входящий звонок';
-    $('#call-status').textContent = 'Нажмите ✅ чтобы принять';
-    $('#call-ui').classList.add('on');
-    $('#btn-acc').classList.remove('hidden');
-    
-    $('#btn-acc').onclick = () => {
-      navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
-        micStream = stream;
-        call.answer(stream);
-        currentCall = call;
-        $('#btn-acc').classList.add('hidden');
-        $('#call-title').textContent = 'Разговор';
-        $('#call-status').textContent = 'Соединено';
-        bindCallEvents(call);
-      }).catch(err => { alert('Нет доступа к микрофону'); call.close(); });
-    };
-  });
-
-  peer.on('error', err => {
-    console.log('Ошибка звонка:', err);
-    endCall();
-  });
-}
-
-function bindCallEvents(call) {
-  call.on('stream', remoteStream => {
-    const audio = new Audio();
-    audio.srcObject = remoteStream;
-    audio.play();
-  });
-  call.on('close', endCall);
-  call.on('error', endCall);
-}
-
-async function startCall() {
-  if (!friendId) return alert('Сначала укажите ID друга (кнопка 🆔).');
-  if (currentCall) return;
-  if (!peer) initPeer();
-
-  try {
-    micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-  } catch (e) {
-    return alert('Нет доступа к микрофону');
+window.setFriend = () => {
+  const t = prompt("Введите ID друга (например, user-abc12):");
+  if (t && t !== myId) {
+    friendId = t;
+    localStorage.setItem('friend_id', friendId);
+    loadChat();
   }
+};
+document.getElementById('btn-id').onclick = window.setFriend;
 
-  const friendPeerId = localStorage.getItem('peer_' + friendId) || friendId;
-  $('#call-title').textContent = 'Звоним...';
-  $('#call-ui').classList.add('on');
-
-  currentCall = peer.call(friendPeerId, micStream);
-  bindCallEvents(currentCall);
-}
-
-function endCall() {
-  if (currentCall) { currentCall.close(); currentCall = null; }
-  if (micStream) { micStream.getTracks().forEach(t => t.stop()); micStream = null; }
-  $('#call-ui').classList.remove('on');
-  $('#btn-acc').classList.add('hidden');
-}
-
-// Чат (Firebase)
-function openChat() {
-  const target = prompt("Введите ID друга (например, user-abc123):");
-  if (!target || target === myId) return;
-  friendId = target;
-  localStorage.setItem('friend_id', friendId);
+function loadChat() {
+  if (!friendId) return;
+  document.getElementById('chat-name').textContent = 'Чат с ' + friendId;
   if (unsubMsgs) unsubMsgs();
-
-  const chatId = [myId, friendId].sort().join('_');
-  $('#chat-name').textContent = 'Чат с ' + friendId;
   
+  const chatId = [myId, friendId].sort().join('_');
   const q = query(collection(db, 'chats', chatId, 'messages'), orderBy('t', 'asc'));
+  
   unsubMsgs = onSnapshot(q, snap => {
-    const msgs = $('#msgs');
+    const msgs = document.getElementById('msgs');
     msgs.innerHTML = '';
     snap.forEach(doc => {
       const m = doc.data();
@@ -203,45 +134,159 @@ function openChat() {
   });
 }
 
-async function sendMsg() {
-  const inp = $('#in');
-  const text = inp.value.trim();
-  if (!text || !friendId) return;
+window.sendMsg = async () => {
+  const inp = document.getElementById('in');
+  const txt = inp.value.trim();
+  if (!txt || !friendId) return;
   inp.value = '';
   const chatId = [myId, friendId].sort().join('_');
   await addDoc(collection(db, 'chats', chatId, 'messages'), {
-    uid: myId, name: myId, text, t: Date.now()
+    uid: myId, name: myId, text: txt, t: Date.now()
   });
-}
-
-async function savePeerId() {
-  await setDoc(doc(db, 'peers', myId), { peerId, t: Date.now() });
-}
-
-async function getFriendPeerId(id) {
-  const d = await getDoc(doc(db, 'peers', id));
-  return d.exists() ? d.data().peerId : null;
-}
-
-initPeer();
-savePeerId();
-
-$('#btn-id').onclick = openChat;
-$('#btn-send').onclick = sendMsg;
-$('#in').onkeydown = e => { if (e.key === 'Enter') sendMsg(); };
-$('#btn-call').onclick = async () => {
-  if (!friendId) return openChat();
-  const fp = await getFriendPeerId(friendId);
-  if (!fp) return alert('Друг еще не заходил в приложение. Его Peer ID не найден.');
-  localStorage.setItem('peer_' + friendId, fp);
-  startCall();
 };
-$('#btn-dec').onclick = endCall;
-$('#btn-mute').onclick = () => {
-  muted = !muted;
-  if (micStream) micStream.getAudioTracks().forEach(t => t.enabled = !muted);
-  $('#btn-mute').textContent = muted ? '🔇' : '🎤';
+
+document.getElementById('btn-send').onclick = window.sendMsg;
+document.getElementById('in').onkeydown = e => { if (e.key === 'Enter') window.sendMsg(); };
+
+// --- ЗВОНКИ (WebRTC + Firebase) ---
+const rtcConfig = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun1.l.google.com:19302' }] };
+
+window.startCall = async () => {
+  if (!friendId) return alert('Сначала укажите ID друга (кнопка 🆔).');
+  if (pc) return alert('Вы уже в звонке.');
+
+  try {
+    micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  } catch (e) {
+    return alert('Нет доступа к микрофону! Разрешите его в настройках браузера.');
+  }
+
+  currentCallId = [myId, friendId].sort().join('_');
+  const callDoc = doc(db, 'calls', currentCallId);
+  const offerCandidates = collection(callDoc, 'callerCandidates');
+  const answerCandidates = collection(callDoc, 'calleeCandidates');
+
+  pc = new RTCPeerConnection(rtcConfig);
+  micStream.getTracks().forEach(track => pc.addTrack(track, micStream));
+
+  pc.ontrack = event => {
+    const audio = new Audio();
+    audio.srcObject = event.streams[0];
+    audio.play();
+  };
+
+  pc.onicecandidate = event => {
+    if (event.candidate) addDoc(offerCandidates, event.candidate.toJSON());
+  };
+
+  const offerDescription = await pc.createOffer();
+  await pc.setLocalDescription(offerDescription);
+
+  await setDoc(callDoc, { offer: { sdp: offerDescription.sdp, type: offerDescription.type }, status: 'ringing' });
+
+  unsubCall = onSnapshot(callDoc, snapshot => {
+    const data = snapshot.data();
+    if (!pc.currentRemoteDescription && data?.answer) {
+      pc.setRemoteDescription(new RTCSessionDescription(data.answer));
+    }
+    if (data?.status === 'ended') endCall();
+  });
+
+  unsubCandidates = onSnapshot(answerCandidates, snapshot => {
+    snapshot.docChanges().forEach(change => {
+      if (change.type === 'added') pc.addIceCandidate(new RTCIceCandidate(change.doc.data()));
+    });
+  });
+
+  $('#call-title').textContent = 'Звоним...';
+  $('#call-ui').classList.add('on');
 };
+
+async function answerCall(offer, callId) {
+  currentCallId = callId;
+  try {
+    micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  } catch (e) {
+    return alert('Нет доступа к микрофону!');
+  }
+
+  const callDoc = doc(db, 'calls', currentCallId);
+  const offerCandidates = collection(callDoc, 'callerCandidates');
+  const answerCandidates = collection(callDoc, 'calleeCandidates');
+
+  pc = new RTCPeerConnection(rtcConfig);
+  micStream.getTracks().forEach(track => pc.addTrack(track, micStream));
+
+  pc.ontrack = event => {
+    const audio = new Audio();
+    audio.srcObject = event.streams[0];
+    audio.play();
+  };
+
+  pc.onicecandidate = event => {
+    if (event.candidate) addDoc(answerCandidates, event.candidate.toJSON());
+  };
+
+  await pc.setRemoteDescription(new RTCSessionDescription(offer));
+  const answerDescription = await pc.createAnswer();
+  await pc.setLocalDescription(answerDescription);
+
+  await updateDoc(callDoc, { answer: { type: answerDescription.type, sdp: answerDescription.sdp }, status: 'connected' });
+
+  unsubCandidates = onSnapshot(offerCandidates, snapshot => {
+    snapshot.docChanges().forEach(change => {
+      if (change.type === 'added') pc.addIceCandidate(new RTCIceCandidate(change.doc.data()));
+    });
+  });
+
+  $('#call-title').textContent = 'Разговор';
+  $('#call-status').textContent = 'Соединено';
+  $('#call-ui').classList.add('on');
+  $('#btn-acc').classList.add('hidden');
+}
+
+function endCall() {
+  if (pc) { pc.close(); pc = null; }
+  if (micStream) { micStream.getTracks().forEach(t => t.stop()); micStream = null; }
+  if (currentCallId) {
+    updateDoc(doc(db, 'calls', currentCallId), { status: 'ended' }).catch(() => {});
+    currentCallId = null;
+  }
+  if (unsubCall) unsubCall();
+  if (unsubCandidates) unsubCandidates();
+  $('#call-ui').classList.remove('on');
+  $('#btn-acc').classList.add('hidden');
+}
+
+document.getElementById('btn-call').onclick = () => {
+  if (!friendId) return window.setFriend();
+  window.startCall();
+};
+document.getElementById('btn-dec').onclick = endCall;
+document.getElementById('btn-mute').onclick = () => {
+  if (micStream) {
+    const track = micStream.getAudioTracks()[0];
+    track.enabled = !track.enabled;
+    document.getElementById('btn-mute').textContent = track.enabled ? '🎤' : '🔇';
+  }
+};
+
+// Слушаем входящие звонки
+onSnapshot(collection(db, 'calls'), snapshot => {
+  snapshot.docChanges().forEach(change => {
+    if (change.type === 'added') {
+      const data = change.doc.data();
+      if (data.status === 'ringing' && change.doc.id.includes(myId) && change.doc.id.includes(friendId)) {
+        $('#call-title').textContent = 'Входящий звонок';
+        $('#call-ui').classList.add('on');
+        $('#btn-acc').classList.remove('hidden');
+        $('#btn-acc').onclick = () => answerCall(data.offer, change.doc.id);
+      }
+    }
+  });
+});
+
+if (friendId) loadChat();
 </script>
 </body>
 </html>
