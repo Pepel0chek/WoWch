@@ -13,7 +13,6 @@
 * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
 body { background: var(--bg); color: var(--tx); height: 100vh; display: flex; overflow: hidden; font-size: 16px; }
 
-/* Левая панель серверов */
 #rail { width: 80px; background: var(--rail); display: flex; flex-direction: column; align-items: center; padding: 16px 0; gap: 12px; z-index: 10; overflow-y: auto; }
 .sv { width: 56px; height: 56px; border-radius: 50%; background: var(--bg); display: grid; place-items: center; font-weight: 700; cursor: pointer; transition: .2s; font-size: 24px; position: relative; flex-shrink: 0; color: var(--tx); }
 .sv:hover, .sv.on { border-radius: 18px; background: var(--br); color: #fff; }
@@ -22,7 +21,6 @@ body { background: var(--bg); color: var(--tx); height: 100vh; display: flex; ov
 .sv.add:hover { border-color: var(--ok); border-radius: 50%; background: var(--hov); }
 .divider { width: 40px; height: 2px; background: var(--side); border-radius: 1px; margin: 4px 0; flex-shrink: 0; }
 
-/* Список каналов */
 #side { width: 280px; background: var(--side); display: flex; flex-direction: column; z-index: 5; }
 .hd { height: 56px; display: flex; align-items: center; justify-content: space-between; padding: 0 16px; font-weight: 700; border-bottom: 1px solid var(--rail); font-size: 16px; }
 #chs { flex: 1; overflow-y: auto; padding: 12px; }
@@ -33,7 +31,6 @@ body { background: var(--bg); color: var(--tx); height: 100vh; display: flex; ov
 .dot { width: 12px; height: 12px; border-radius: 50%; position: absolute; bottom: -2px; right: -2px; border: 2px solid var(--side); }
 .online { background: var(--ok); } .offline { background: var(--mu); }
 
-/* Голосовые участники */
 .voice-users { padding-left: 36px; margin-top: 6px; margin-bottom: 8px; }
 .v-user { display: flex; align-items: center; gap: 10px; padding: 6px 0; font-size: 14px; color: var(--mu); position: relative; }
 .v-user.speaking .av { box-shadow: 0 0 0 3px var(--ok); }
@@ -88,7 +85,6 @@ button.sec { background: var(--in); color: var(--tx); } button.sec:hover { backg
 .login-box input { width: 100%; padding: 16px; border-radius: 6px; border: 0; background: var(--in); color: #fff; font-size: 18px; margin-bottom: 20px; outline: 0; }
 .login-box button { width: 100%; padding: 16px; background: var(--br); border: 0; border-radius: 6px; color: #fff; font-weight: 700; font-size: 18px; cursor: pointer; }
 
-/* Звонки */
 #call-ui { background: rgba(0,0,0,0.5); backdrop-filter: blur(10px); color: #fff; flex-direction: column; }
 #call-ui.on { display: flex; }
 #call-avatar-box { width: 160px; height: 160px; border-radius: 50%; margin-bottom: 30px; position: relative; box-shadow: 0 0 40px rgba(88,101,242,0.6); background: var(--br); display: grid; place-items: center; font-size: 64px; font-weight: 700; background-size: cover; background-position: center; border: 5px solid rgba(255,255,255,0.2); }
@@ -158,7 +154,6 @@ let unsubMsgs = null, unsubOnline = null, unsubVoice = null, peer = null;
 let onlineUsers = {}, usersCache = {};
 let currentFriendName = '';
 let currentVoiceChannel = null;
-let localStream = null;
 let activeCalls = {}; 
 let activePersonalCall = null;
 let hasMicPermission = false;
@@ -187,12 +182,14 @@ function createAvatar(name, avatarUrl, statusDot = false, isOnline = false) {
 // --- ЗАПРОС МИКРОФОНА ---
 $('#mic-request').onclick = async () => {
   try {
-    localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    // Запрашиваем поток ТОЛЬКО для проверки
+    const tempStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    tempStream.getTracks().forEach(t => t.stop()); // Сразу выключаем
     hasMicPermission = true;
     $('#mic-request').style.display = 'none';
-    toast('Микрофон подключен!');
+    toast('Доступ к микрофону получен!');
   } catch (e) {
-    alert('Ошибка: ' + e.message + '\nПожалуйста, проверьте настройки браузера.');
+    alert('Ошибка доступа к микрофону. Проверьте настройки браузера.');
   }
 };
 
@@ -348,25 +345,20 @@ function renderServerChannels() {
   });
 }
 
-// --- ГОЛОСОВЫЕ КАНАЛЫ (ИСПРАВЛЕНО) ---
+// --- ГОЛОСОВЫЕ КАНАЛЫ ---
 async function joinVoice(sid, cid) {
   if (!hasMicPermission) {
-    return alert('Сначала нажмите на зеленую кнопку "🎤 Включить микрофон" в правом нижнем углу!');
+    return alert('Сначала нажмите на кнопку "🎤 Включить микрофон" в правом нижнем углу!');
   }
   if (currentVoiceChannel === `${sid}_${cid}`) { leaveVoice(); return; }
   if (currentVoiceChannel) leaveVoice();
   
   currentVoiceChannel = `${sid}_${cid}`;
-  if (!localStream) {
-    try {
-      localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    } catch (e) { return alert('Нет доступа к микрофону!'); }
-  }
+  toast('Вы в голосовом канале ' + cid);
 
   await updateDoc(doc(db, 'servers', sid), {
     [`voice_${cid}.${myId}`]: { name: myDisplayName, avatar: myAvatar || '', peerId: myPeerId }
   });
-  toast('Вы в голосовом канале ' + cid);
 }
 
 async function leaveVoice() {
@@ -376,7 +368,6 @@ async function leaveVoice() {
   
   Object.values(activeCalls).forEach(call => call.close());
   activeCalls = {};
-  if (localStream) { localStream.getTracks().forEach(t => t.stop()); localStream = null; }
   currentVoiceChannel = null;
 }
 
@@ -400,9 +391,12 @@ function listenVoice(sid) {
         
         if (currentVoiceChannel === `${sid}_${c.id}` && uid !== myId && u.peerId) {
           if (!activeCalls[uid]) {
-            if (myId < uid) { // Звонит только "старший"
-              const call = peer.call(u.peerId, localStream, { metadata: { name: myDisplayName, avatar: myAvatar } });
-              setupVoiceCall(call, uid);
+            // Звонит только тот, у кого ID "меньше", чтобы избежать двойных вызовов
+            if (myId < uid) {
+              navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
+                const call = peer.call(u.peerId, stream, { metadata: { name: myDisplayName, avatar: myAvatar } });
+                setupVoiceCall(call, uid);
+              }).catch(e => console.log('Mic err:', e));
             }
           }
         }
@@ -528,12 +522,16 @@ function initPeer() {
   peer.on('error', err => console.log('Ошибка PeerJS:', err.type));
   
   peer.on('call', call => {
+    // Автоответ для каналов
     if (currentVoiceChannel && call.metadata && call.metadata.name) {
-      call.answer(localStream);
-      setupVoiceCall(call, call.peer);
+      navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
+        call.answer(stream);
+        setupVoiceCall(call, call.peer);
+      }).catch(e => console.log('Mic err:', e));
       return;
     }
 
+    // Личный звонок
     if (activePersonalCall) { call.close(); return; }
     
     let callerName = call.metadata?.name || 'Неизвестный'; let callerAvatar = call.metadata?.avatar || null;
@@ -565,14 +563,15 @@ window.startCall = async () => {
   if (!fData || !fData.peerId) return alert('Друг не в сети.');
   
   if (!hasMicPermission) {
-    return alert('Сначала нажмите на зеленую кнопку "🎤 Включить микрофон" в правом нижнем углу!');
+    return alert('Сначала нажмите на кнопку "🎤 Включить микрофон" в правом нижнем углу!');
   }
   
-  toast('Если висит — сервер просыпается.');
+  toast('Звоним...');
   
   try {
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    $('#call-name').textContent = currentFriendName; $('#call-status').textContent = 'Звоним...';
+    $('#call-name').textContent = currentFriendName; 
+    $('#call-status').textContent = 'Звоним...';
     const av = $('#call-avatar-box');
     if (fData.avatar) { av.style.backgroundImage = `url(${fData.avatar})`; av.textContent = ''; }
     else { av.style.backgroundImage = 'none'; av.style.background = getColor(currentFriendName); av.textContent = currentFriendName[0].toUpperCase(); }
@@ -581,7 +580,7 @@ window.startCall = async () => {
     activePersonalCall = peer.call(fData.peerId, stream, { metadata: { name: myDisplayName, avatar: myAvatar } });
     setupPersonalCallUI(activePersonalCall);
   } catch (e) {
-    alert('Ошибка микрофона!');
+    alert('Ошибка доступа к микрофону! Убедитесь, что он не занят другой программой.');
   }
 };
 
