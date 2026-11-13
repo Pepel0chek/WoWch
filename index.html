@@ -14,7 +14,7 @@
 * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
 body { background: var(--bg); color: var(--tx); height: 100vh; display: flex; overflow: hidden; font-size: 15px; }
 
-/* Левая панель серверов */
+/* Левая панель */
 #rail { width: 72px; background: var(--rail); display: flex; flex-direction: column; align-items: center; padding: 12px 0; gap: 8px; z-index: 10; }
 .sv { width: 48px; height: 48px; border-radius: 50%; background: var(--bg); display: grid; place-items: center; font-weight: 700; cursor: pointer; transition: .2s; font-size: 20px; }
 .sv.on, .sv:hover { border-radius: 15px; background: var(--br); color: #fff; }
@@ -23,11 +23,11 @@ body { background: var(--bg); color: var(--tx); height: 100vh; display: flex; ov
 #side { width: 260px; background: var(--side); display: flex; flex-direction: column; z-index: 5; border-right: 1px solid var(--rail); }
 .hd { height: 54px; display: flex; align-items: center; justify-content: space-between; padding: 0 16px; font-weight: 700; border-bottom: 1px solid var(--rail); font-size: 16px; }
 #chs { flex: 1; overflow-y: auto; padding: 8px; }
-.ch { display: flex; align-items: center; padding: 8px; border-radius: 6px; cursor: pointer; color: var(--mu); font-weight: 600; margin-bottom: 2px; transition: .1s; }
+.ch { display: flex; align-items: center; padding: 8px; border-radius: 6px; cursor: pointer; color: var(--mu); font-weight: 600; margin-bottom: 4px; transition: .1s; }
 .ch:hover, .ch.on { background: var(--hov); color: var(--tx); }
 .av { width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; color: #fff; font-weight: 700; margin-right: 12px; flex-shrink: 0; font-size: 15px; position: relative; }
-.dot { width: 10px; height: 10px; border-radius: 50%; position: absolute; bottom: 0; right: 0; border: 2px solid var(--side); }
-.online { background: var(--ok); border-color: var(--side); } .offline { background: var(--mu); border-color: var(--side); }
+.dot { width: 12px; height: 12px; border-radius: 50%; position: absolute; bottom: 0; right: 0; border: 2px solid var(--side); }
+.online { background: var(--ok); } .offline { background: var(--mu); }
 
 #me { padding: 12px; background: var(--rail); display: flex; align-items: center; justify-content: space-between; border-top: 1px solid var(--side); }
 #me-info { display: flex; align-items: center; overflow: hidden; }
@@ -63,9 +63,16 @@ body { background: var(--bg); color: var(--tx); height: 100vh; display: flex; ov
 button.action { border: 0; border-radius: 6px; padding: 8px 12px; cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 6px; transition: .2s; }
 button.sec { background: var(--in); color: var(--tx); }
 button.sec:hover { background: var(--hov); }
-button.err { background: var(--err); color: #fff; }
 button.br { background: var(--br); color: #fff; }
 button.br:hover { filter: brightness(1.1); }
+
+/* Модальное окно */
+#modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: none; align-items: center; justify-content: center; z-index: 300; }
+.modal { background: var(--bg); padding: 24px; border-radius: 12px; width: 320px; box-shadow: 0 8px 24px rgba(0,0,0,0.5); }
+.modal h3 { margin-bottom: 16px; font-size: 18px; }
+.modal input { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--rail); background: var(--in); color: #fff; font-size: 15px; margin-bottom: 16px; outline: 0; }
+.modal input:focus { border-color: var(--br); }
+.modal-actions { display: flex; gap: 8px; justify-content: flex-end; }
 
 /* Авторизация */
 #login { position: fixed; inset: 0; background: var(--rail); display: flex; align-items: center; justify-content: center; z-index: 200; }
@@ -89,7 +96,6 @@ button.br:hover { filter: brightness(1.1); }
 #btn-mute { background: var(--in); color: var(--tx); } #btn-mute:hover { background: var(--hov); }
 .hidden { display: none !important; }
 
-/* Мобильная адаптация */
 @media (max-width: 600px) {
   #rail { display: none; }
   #side { width: 80px; }
@@ -109,6 +115,7 @@ button.br:hover { filter: brightness(1.1); }
 </head>
 <body>
 
+<!-- Окно входа -->
 <div id="login">
   <div class="login-box">
     <h1>С возвращением!</h1>
@@ -116,6 +123,18 @@ button.br:hover { filter: brightness(1.1); }
     <div id="login-msg"></div>
     <input id="username" placeholder="Ваше имя (от 3 символов)" autocomplete="off">
     <button onclick="login()">Войти</button>
+  </div>
+</div>
+
+<!-- Окно добавления друга -->
+<div id="modal-bg">
+  <div class="modal">
+    <h3>Добавить друга</h3>
+    <input id="friend-id" placeholder="Введите ID друга (например, pepel)" autocomplete="off">
+    <div class="modal-actions">
+      <button class="action sec" onclick="document.getElementById('modal-bg').style.display='none'">Отмена</button>
+      <button class="action br" onclick="confirmAddFriend()">Добавить</button>
+    </div>
   </div>
 </div>
 
@@ -172,7 +191,6 @@ button.br:hover { filter: brightness(1.1); }
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
 import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, doc, setDoc, getDoc, updateDoc, arrayUnion } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
-// ТВОИ КЛЮЧИ ИЗ FIREBASE
 const firebaseConfig = {
   apiKey: "AIzaSyD5vrDqL4tGPzpQDLpy4j2vJepPrVAVFzc",
   authDomain: "wowch-949f8.firebaseapp.com",
@@ -195,7 +213,6 @@ let onlineUsers = {};
 
 const $ = s => document.querySelector(s);
 
-// Красивые цвета для аватарок
 function getColor(str) {
   let hash = 0;
   for (let i = 0; i < str.length; i++) hash = str.charCodeAt(i) + ((hash << 5) - hash);
@@ -203,7 +220,7 @@ function getColor(str) {
   return '#' + '00000'.substring(0, 6 - c.length) + c;
 }
 
-// --- АВТОРИЗАЦИЯ ---
+// --- ВХОД ---
 window.login = async () => {
   const name = $('#username').value.trim();
   if (name.length < 3) return $('#login-msg').textContent = 'Имя должно быть от 3 символов';
@@ -237,10 +254,9 @@ window.login = async () => {
   $('#my-av').textContent = name[0].toUpperCase();
   $('#my-av').style.background = getColor(name);
 
-  // Добавляем себя в онлайн
   const onlineRef = doc(db, 'online', myId);
   await setDoc(onlineRef, { t: Date.now() });
-  setInterval(() => setDoc(onlineRef, { t: Date.now() }), 15000); // Пульс
+  setInterval(() => setDoc(onlineRef, { t: Date.now() }), 15000);
 
   initPeer();
   renderFriends();
@@ -260,7 +276,7 @@ $('#logout').onclick = () => {
   location.reload();
 };
 
-// --- ОНЛАЙН СТАТУСЫ ---
+// --- ОНЛАЙН ---
 function listenOnline() {
   onSnapshot(collection(db, 'online'), snap => {
     onlineUsers = {};
@@ -275,7 +291,9 @@ function listenOnline() {
 // --- ДРУЗЬЯ ---
 window.renderFriends = async () => {
   const l = $('#chs'); l.innerHTML = '';
-  for (const fid of friends) {
+  const uniqueFriends = [...new Set(friends)]; // Убираем дубликаты при отрисовке
+  
+  for (const fid of uniqueFriends) {
     const snap = await getDoc(doc(db, 'users', fid));
     if (!snap.exists()) continue;
     const fData = snap.data();
@@ -300,20 +318,30 @@ window.renderFriends = async () => {
   }
 };
 
-window.addFriend = async () => {
-  const fname = prompt("Введите имя друга (ID):");
+window.confirmAddFriend = async () => {
+  const fname = $('#friend-id').value.trim();
   if (!fname) return;
-  const fid = fname.trim().toLowerCase().replace(/[^a-z0-9_]/g, '');
-  if (fid === myId || friends.includes(fid)) return;
+  const fid = fname.toLowerCase().replace(/[^a-z0-9_]/g, '');
+  
+  if (fid === myId) return alert('Это ваш собственный ID!');
+  if (friends.includes(fid)) return alert('Этот друг уже есть в вашем списке!');
 
   const snap = await getDoc(doc(db, 'users', fid));
-  if (!snap.exists()) return alert('Пользователь не найден.');
+  if (!snap.exists()) return alert('Пользователь с таким ID не найден.');
 
   friends.push(fid);
   await updateDoc(doc(db, 'users', myId), { friends: arrayUnion(fid) });
+  
+  $('#friend-id').value = '';
+  $('#modal-bg').style.display = 'none';
   renderFriends();
 };
-$('#btn-add').onclick = window.addFriend;
+
+$('#btn-add').onclick = () => {
+  $('#friend-id').value = '';
+  $('#modal-bg').style.display = 'flex';
+  $('#friend-id').focus();
+};
 
 // --- ЧАТ ---
 let currentFriendName = '';
