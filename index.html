@@ -658,7 +658,7 @@ window.uploadFile = (input) => {
   reader.readAsDataURL(file);
 };
 
-// --- ЛИЧНЫЕ ЗВОНКИ (ИСПРАВЛЕНА ОШИБКА) ---
+// --- ЛИЧНЫЕ ЗВОНКИ (ЗАЩИТА ОТ ОШИБКИ) ---
 function initPeer() {
   if (peer) peer.destroy();
   
@@ -727,7 +727,6 @@ window.startCall = async () => {
   toast('Звоним...');
   
   try {
-    // Запрашиваем микрофон. Если браузер выеб... капризничает, создаем заглушку.
     let stream;
     try { stream = await navigator.mediaDevices.getUserMedia({ audio: true }); } 
     catch(e) { 
@@ -746,9 +745,20 @@ window.startCall = async () => {
     
     playRingtone('outgoing');
 
-    activePersonalCall = peer.call(fData.peerId, stream, { metadata: { name: myDisplayName, avatar: myAvatar } });
+    const call = peer.call(fData.peerId, stream, { metadata: { name: myDisplayName, avatar: myAvatar } });
+    
+    // Защита от TypeError, если соединение не создалось
+    if (!call) {
+      stopRingtone();
+      $('#call-ui').classList.remove('on');
+      return alert('Не удалось создать соединение с сервером. Попробуйте еще раз через минуту (сервер просыпается).');
+    }
+
+    activePersonalCall = call;
     setupPersonalCallUI(activePersonalCall);
   } catch (e) {
+    stopRingtone();
+    $('#call-ui').classList.remove('on');
     alert('Критическая ошибка при звонке: ' + e.name + '\n' + e.message);
   }
 };
